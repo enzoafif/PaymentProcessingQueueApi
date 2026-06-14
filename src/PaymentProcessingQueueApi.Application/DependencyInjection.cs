@@ -1,7 +1,14 @@
 using Microsoft.Extensions.DependencyInjection;
+using PaymentProcessingQueueApi.Application.UseCases.AttendNextTransaction;
 using PaymentProcessingQueueApi.Application.UseCases.CreateTransaction;
 using PaymentProcessingQueueApi.Application.UseCases.DeleteTransaction;
+using PaymentProcessingQueueApi.Application.UseCases.GetNextTransaction;
+using PaymentProcessingQueueApi.Application.UseCases.GetPagedTransactions;
+using PaymentProcessingQueueApi.Application.UseCases.GetStatistics;
 using PaymentProcessingQueueApi.Application.UseCases.GetTransactionById;
+using PaymentProcessingQueueApi.Application.UseCases.SearchTransactions;
+using PaymentProcessingQueueApi.Application.UseCases.UpdateTransaction;
+using PaymentProcessingQueueApi.Application.UseCases.UpdateTransactionStatus;
 using PaymentProcessingQueueApi.Domain.PriorityRules;
 using PaymentProcessingQueueApi.Domain.Services;
 
@@ -20,6 +27,13 @@ public static class DependencyInjection
         services.AddScoped<CreateTransactionUseCase>();
         services.AddScoped<GetTransactionByIdUseCase>();
         services.AddScoped<DeleteTransactionUseCase>();
+        services.AddScoped<GetPagedTransactionsUseCase>();
+        services.AddScoped<SearchTransactionsUseCase>();
+        services.AddScoped<UpdateTransactionUseCase>();
+        services.AddScoped<GetNextTransactionUseCase>();
+        services.AddScoped<AttendNextTransactionUseCase>();
+        services.AddScoped<UpdateTransactionStatusUseCase>();
+        services.AddScoped<GetStatisticsUseCase>();
 
         return services;
     }

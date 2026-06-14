@@ -125,4 +125,45 @@ public class Transaction
         DeletedAt = now;
         UpdatedAt = now;
     }
+
+    /// <summary>
+    /// Atualiza os campos editáveis da transação. O CPF não é alterável.
+    /// A prioridade deve ser recalculada externamente após este método (via <see cref="AssignPriority"/>).
+    /// </summary>
+    public void Update(
+        string description, string? reference, decimal amount,
+        TransactionType type, ClientType clientType, FraudRiskLevel fraudRisk,
+        DateTime cutoffTime, DateTime now)
+    {
+        if (Status == TransactionStatus.Deleted)
+            throw new BusinessRuleException("Não é possível atualizar uma transação excluída.");
+        if (string.IsNullOrWhiteSpace(description))
+            throw new BusinessRuleException("A descrição da transação é obrigatória.");
+        if (amount <= 0)
+            throw new BusinessRuleException("O valor da transação deve ser maior que zero.");
+
+        Description = description.Trim();
+        Reference = reference?.Trim();
+        Amount = amount;
+        Type = type;
+        ClientType = clientType;
+        FraudRisk = fraudRisk;
+        CutoffTime = cutoffTime;
+        UpdatedAt = now;
+    }
+
+    /// <summary>
+    /// Altera o status da transação. Não pode ser usado para marcar como <see cref="TransactionStatus.Deleted"/>
+    /// (use <see cref="SoftDelete"/> para isso).
+    /// </summary>
+    public void UpdateStatus(TransactionStatus newStatus, DateTime now)
+    {
+        if (Status == TransactionStatus.Deleted)
+            throw new BusinessRuleException("Não é possível alterar o status de uma transação excluída.");
+        if (newStatus == TransactionStatus.Deleted)
+            throw new BusinessRuleException("Para excluir uma transação, utilize o endpoint DELETE.");
+
+        Status = newStatus;
+        UpdatedAt = now;
+    }
 }

@@ -29,8 +29,8 @@ public static class TransactionSeeder
         var samples = new[]
         {
             // Alto valor + cutoff muito próximo => prioridade altíssima
-            new Sample("11144477735", "Remessa internacional para fornecedor", "REM-001",
-                2_500_000m, TransactionType.InternationalRemittance, ClientType.Corporate,
+            new Sample("11144477735", "PIX para fornecedor urgente", "PIX-001",
+                2_500_000m, TransactionType.Pix, ClientType.Corporate,
                 FraudRiskLevel.Low, baseTime.AddMinutes(10)),
 
             // Baixo valor + cutoff distante => prioridade baixa
@@ -38,14 +38,14 @@ public static class TransactionSeeder
                 850m, TransactionType.Boleto, ClientType.Standard,
                 FraudRiskLevel.Low, baseTime.AddHours(8)),
 
-            // Valor alto + cliente premium + cutoff em 2h => prioridade média/alta
-            new Sample("47207183887", "PIX agendado folha de pagamento", "PIX-003",
-                120_000m, TransactionType.Pix, ClientType.Premium,
+            // Alto valor + cliente premium + cutoff em 2h => prioridade média/alta
+            new Sample("47207183887", "Crédito agendado folha de pagamento", "CRD-003",
+                120_000m, TransactionType.Credito, ClientType.Premium,
                 FraudRiskLevel.Medium, baseTime.AddHours(2)),
 
-            // Valor altíssimo, porém risco ALTO => penalidade derruba a prioridade
-            new Sample("96387304989", "TED suspeita de alto valor", "TED-004",
-                3_000_000m, TransactionType.Ted, ClientType.Corporate,
+            // Alto valor, porém risco ALTO => penalidade derruba a prioridade
+            new Sample("96387304989", "Débito suspeito de alto valor", "DEB-004",
+                3_000_000m, TransactionType.Debito, ClientType.Corporate,
                 FraudRiskLevel.High, baseTime.AddMinutes(30)),
         };
 

@@ -1,4 +1,5 @@
 using PaymentProcessingQueueApi.Domain.Entities;
+using PaymentProcessingQueueApi.Domain.Enums;
 
 namespace PaymentProcessingQueueApi.Application.Interfaces;
 
@@ -16,6 +17,18 @@ public interface ITransactionRepository
 
     /// <summary>Lista as transações ativas (não excluídas) — base para a fila de prioridade.</summary>
     Task<IReadOnlyList<Transaction>> GetActiveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Lista transações ativas paginadas, ordenadas por prioridade decrescente e desempate por CreatedAt.
+    /// Retorna os itens da página e o total de itens ativos.
+    /// </summary>
+    Task<(IReadOnlyList<Transaction> Items, int TotalItems)> GetPagedAsync(int page, int size, CancellationToken cancellationToken = default);
+
+    /// <summary>Busca transações ativas cuja descrição contém o termo informado (case-insensitive).</summary>
+    Task<IReadOnlyList<Transaction>> SearchByDescriptionAsync(string descricao, CancellationToken cancellationToken = default);
+
+    /// <summary>Retorna a contagem de transações agrupada por status.</summary>
+    Task<Dictionary<TransactionStatus, int>> GetStatusCountsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>Persiste alterações de uma transação já existente (ex.: exclusão lógica).</summary>
     Task UpdateAsync(Transaction transaction, CancellationToken cancellationToken = default);

@@ -8,56 +8,50 @@ recurso `Transação`).
 > **Por que uma fila de prioridade, e não FIFO?** No processamento de pagamentos, a próxima
 > transação a ser executada não é necessariamente a que chegou primeiro: transações de **alto
 > valor** ou com **horário limite (cutoff) próximo** precisam ser liquidadas antes para evitar
-> **multas contratuais** e garantir **liquidez** ao sistema financeiro. Uma fila FIFO comum
-> ignoraria essa urgência de negócio.
-
----
-
-## ⚠️ Escopo desta entrega
-
-Esta é uma **entrega parcial**. Os itens abaixo previstos no enunciado **ainda serão
-implementados** numa próxima etapa (roadmap):
-
-| Item do enunciado | Situação | Próxima etapa |
-|-------------------|----------|---------------|
-| Docker Compose | 🚧 A implementar | Subir o banco (e a API) via `docker-compose.yml` |
-| Banco de dados real | 🚧 A implementar | Hoje roda em **EF Core InMemory**; migrar para um banco relacional (ex.: SQL Server/PostgreSQL) — a troca é isolada em `Infrastructure/DependencyInjection.cs` (ver abaixo) |
-| Testes unitários | 🚧 A implementar | Cobrir a regra de prioridade, o desempate e a exclusão lógica |
-| Endpoints restantes | 🚧 A implementar | Hoje há **POST**, **GET /{id}** e **DELETE**; faltam listagem paginada, busca e **PUT** |
-
-Já está implementado e funcional: regra de prioridade explícita e derivada, tratamento de
-empate, exclusão lógica, Heap, arquitetura em camadas (Clean Architecture/DDD), SOLID,
-Swagger/OpenAPI e validação/tratamento de erros.
-
-> **Observação sobre a rota:** como o código foi escrito em inglês, o recurso é exposto em
-> `/transactions` (o enunciado sugere `/transacoes`). É só uma string em `TransactionsController`
-> caso queira renomear.
+> **multas contratuais** e garantir **liquidez** ao sistema financeiro.
 
 ---
 
 ## 🚀 Como executar
 
-Pré-requisito: **.NET SDK 9**.
+### Opção 1 — Docker Compose (recomendado)
+
+Pré-requisito: **Docker Desktop**.
 
 ```bash
 cd PaymentProcessingQueueApi
+docker-compose up --build
+```
+
+A API sobe em `http://localhost:5089`. O Swagger estará em:
+
+```
+http://localhost:5089/swagger
+```
+
+### Opção 2 — Localmente com banco via Docker
+
+Pré-requisito: **.NET SDK 9** e **Docker Desktop**.
+
+```bash
+# 1) Sobe apenas o banco
+docker-compose up postgres
+
+# 2) Em outro terminal, executa a API
 dotnet run --project src/PaymentProcessingQueueApi.Api
 ```
 
-A aplicação sobe em `http://localhost:5272`. A raiz (`/`) redireciona para o **Swagger**:
-
-```
-http://localhost:5272/swagger
-```
+A aplicação sobe em `http://localhost:5272`. As migrations são aplicadas automaticamente na
+inicialização (`context.Database.Migrate()`).
 
 Na inicialização, uma **massa inicial (seed)** com 4 transações de prioridades diferentes é
-carregada automaticamente, facilitando a demonstração.
+carregada automaticamente.
 
 ---
 
 ## 🏛️ Arquitetura
 
-Solução .NET com 4 projetos, inspirada em **Clean Architecture + DDD**. As setas indicam a
+Solução .NET com 5 projetos, inspirada em **Clean Architecture + DDD**. As setas indicam a
 direção das dependências (o Domínio não depende de ninguém):
 
 ```
@@ -68,54 +62,44 @@ Api  ──►  Application  ──►  Domain  ◄──  Infrastructure
 
 ```
 PaymentProcessingQueueApi/
+├── docker-compose.yaml
+├── Dockerfile
 ├── src/
 │   ├── PaymentProcessingQueueApi.Api/            → Apresentação (HTTP)
 │   │   ├── Controllers/        TransactionsController
-│   │   ├── Requests/           CreateTransactionRequest (validação de formato)
-│   │   ├── Responses/          TransactionResponse
+│   │   ├── Requests/           CreateTransactionRequest, UpdateTransactionRequest, UpdateStatusRequest
+│   │   ├── Responses/          TransactionResponse, PagedTransactionResponse, StatisticsResponse
 │   │   ├── Mappings/           DTO → Response
 │   │   ├── Middlewares/        ExceptionHandlingMiddleware (erros → ProblemDetails)
-│   │   └── Program.cs          composição, Swagger, seed
+│   │   └── Program.cs          composição, Swagger, seed, migrate
 │   │
 │   ├── PaymentProcessingQueueApi.Application/     → Casos de uso (orquestração)
-│   │   ├── UseCases/           CreateTransaction / GetTransactionById / DeleteTransaction
+│   │   ├── UseCases/           10 casos de uso
 │   │   ├── Interfaces/         ITransactionRepository (abstração de persistência)
-│   │   ├── DTOs/               TransactionDto + mapeamento
+│   │   ├── DTOs/               TransactionDto, PagedResultDto, TransactionStatisticsDto
 │   │   └── Exceptions/         ResourceNotFoundException
 │   │
 │   ├── PaymentProcessingQueueApi.Domain/          → Coração do software (sem dependências)
-│   │   ├── Entities/           Transaction (entidade rica)
+│   │   ├── Entities/           Transaction (entidade rica: Create, Update, UpdateStatus, SoftDelete)
 │   │   ├── Enums/              TransactionStatus / Type / ClientType / FraudRiskLevel
-│   │   ├── PriorityRules/      IPriorityRule + TransactionPriorityRule (a regra!)
-│   │   ├── DataStructures/     BinaryHeap<T>  (o Heap!)
+│   │   ├── PriorityRules/      IPriorityRule + TransactionPriorityRule
+│   │   ├── DataStructures/     BinaryHeap<T>
 │   │   ├── Services/           TransactionPriorityQueue + TransactionPriorityComparer
 │   │   ├── Abstractions/       IClock
 │   │   └── Exceptions/         BusinessRuleException
 │   │
 │   └── PaymentProcessingQueueApi.Infrastructure/  → Detalhes técnicos
+│       ├── Migrations/         InitialCreate (PostgreSQL)
 │       ├── Persistence/        AppDbContext + Configurations + TransactionSeeder
-│       ├── Repositories/       TransactionRepository (EF Core)
+│       ├── Repositories/       TransactionRepository (EF Core + Npgsql)
 │       └── Time/               SystemClock
 │
-└── README.md
+└── tests/
+    └── PaymentProcessingQueueApi.UnitTests/       → 33 testes unitários (xUnit)
+        ├── PriorityRules/      TransactionPriorityRuleTests
+        ├── DataStructures/     BinaryHeapTests
+        └── Domain/             TransactionSoftDeleteTests
 ```
-
-### Responsabilidade de cada camada
-- **Api (Apresentação):** recebe a requisição, valida o **formato** (DataAnnotations), mapeia
-  para DTO e devolve HTTP. Sem regra de negócio.
-- **Application:** coordena o caso de uso — busca via interface de repositório, chama a regra de
-  domínio e persiste. Não conhece EF Core.
-- **Domain:** entidade, enums, **regra de prioridade** e **estrutura de dados (Heap)**. Não
-  depende de nenhum framework.
-- **Infrastructure:** implementa o repositório (EF Core), o relógio e o seed.
-
-### Onde aparecem os princípios SOLID
-- **S**RP — cada classe tem um motivo de mudança (regra, fila, repositório, mapeadores separados).
-- **O**CP — `IPriorityRule` permite novas regras de prioridade sem alterar os consumidores.
-- **L**SP — `BinaryHeap<T>` funciona com qualquer `IComparer<T>` respeitando o contrato.
-- **I**SP — `ITransactionRepository` expõe só o necessário aos casos de uso.
-- **D**IP — Application/Domain dependem de **abstrações** (`ITransactionRepository`, `IClock`,
-  `IPriorityRule`); a Infrastructure as implementa.
 
 ---
 
@@ -140,9 +124,6 @@ fila"** sem revisão. O total nunca fica negativo (piso = 0).
 Se duas transações têm o **mesmo score**, vence a **mais antiga** (`CreatedAt` menor) — quem
 espera há mais tempo é atendido primeiro. Implementado em `TransactionPriorityComparer`.
 
-> A prioridade é fixada no **cadastro** (referência de tempo = `CreatedAt`). Um endpoint `PUT`
-> (fora do escopo) recalcularia o score quando os dados mudassem.
-
 ---
 
 ## 🌳 Onde o Heap se encaixa
@@ -154,34 +135,34 @@ que a implementa de forma eficiente (`BinaryHeap<T>` em `Domain/DataStructures`)
 - **Inserção** reposiciona o nó "subindo" (*sift-up*) → **O(log n)**.
 - **Remoção do topo** traz o último elemento para a raiz e o "desce" (*sift-down*) → **O(log n)**.
 
-Mapeamento pai/filhos em vetor: filhos de `i` em `2i+1` e `2i+2`; pai em `(i-1)/2`.
-
-`TransactionPriorityQueue` usa o Heap (com o `TransactionPriorityComparer`) para responder
-**“qual a próxima transação?”** e **“qual a posição desta transação na fila?”** — este último é
-devolvido no campo `positionInQueue` das respostas de POST e GET, tornando o Heap **observável**
-pelos endpoints implementados.
-
-Uma fila **FIFO** comum não resolveria o problema: ela atenderia um boleto de R$ 50 cadastrado às
-8h antes de uma remessa de R$ 2.000.000 com cutoff em 10 minutos.
-
 ---
 
 ## 🔌 Endpoints
 
-Base: `http://localhost:5272`
+Base: `http://localhost:5272` (local) | `http://localhost:5089` (Docker)
 
 | Método | Rota | Descrição | Sucesso | Erros |
 |--------|------|-----------|:-------:|-------|
-| `POST` | `/transactions` | Cadastra uma transação (prioridade calculada) | 201 | 400 |
-| `GET` | `/transactions/{id}` | Consulta uma transação por id | 200 | 404 |
-| `DELETE` | `/transactions/{id}` | Exclusão **lógica** (altera status) | 204 | 404 / 409 |
+| `POST` | `/transacoes` | Cadastra uma transação (prioridade calculada automaticamente) | 201 | 400 |
+| `GET` | `/transacoes?page=1&size=10` | Lista transações ativas paginadas por prioridade | 200 | — |
+| `GET` | `/transacoes/buscar?descricao=pix` | Busca por descrição (contains, case-insensitive) | 200 | 400 |
+| `GET` | `/transacoes/{id}` | Consulta uma transação por id | 200 | 404 |
+| `GET` | `/transacoes/proximo` | Próxima transação da fila (maior prioridade, Waiting) | 200/204 | — |
+| `POST` | `/transacoes/proximo/atender` | Seleciona a próxima e muda status para Processing | 200 | 404 |
+| `PUT` | `/transacoes/{id}` | Atualiza dados e recalcula prioridade automaticamente | 200 | 400/404 |
+| `PATCH` | `/transacoes/{id}/status` | Atualiza apenas o status (Waiting/Processing/Completed) | 200 | 400/404/409 |
+| `DELETE` | `/transacoes/{id}` | Exclusão **lógica** (altera status, não remove fisicamente) | 204 | 404/409 |
+| `GET` | `/transacoes/estatisticas` | Contagem de transações agrupada por status | 200 | — |
 
 ### Exclusão lógica
 O `DELETE` **não apaga** o registro: muda `status` para `Deleted`, `active` para `false` e grava
-`deletedAt`. Depois disso, a transação **não aparece** mais no `GET /{id}` (retorna 404) nem
-participa da fila de prioridade.
+`deletedAt`. Depois disso, a transação **não aparece** em nenhum `GET` comum.
 
-### Exemplo — POST `/transactions`
+---
+
+## 📋 Exemplos de payload JSON
+
+### POST `/transacoes` — Criar transação
 ```json
 {
   "cpf": "11144477735",
@@ -195,68 +176,114 @@ participa da fila de prioridade.
 }
 ```
 
-Resposta `201 Created` (resumida):
+Resposta `201 Created`:
 ```json
 {
   "id": "0141f31f-ed1d-4f45-a46b-9dc54c3d86de",
+  "cpf": "11144477735",
+  "description": "PIX agendado folha de pagamento",
   "amount": 120000.00,
   "type": "Pix",
+  "clientType": "Premium",
+  "fraudRisk": "Low",
   "priority": 51,
   "status": "Waiting",
-  "positionInQueue": 4,
+  "positionInQueue": 3,
   "priorityComponents": [
     { "factor": "Amount",          "points": 30, "reason": "Valor da transação (≥ R$ 100.000)." },
     { "factor": "CutoffTime",      "points": 3,  "reason": "Proximidade do horário limite (> 4 h do cutoff)." },
     { "factor": "ClientType",      "points": 10, "reason": "Segmento do cliente (Premium)." },
     { "factor": "TransactionType", "points": 8,  "reason": "Tipo de transação (Pix)." },
     { "factor": "FraudRisk",       "points": 0,  "reason": "Ajuste por risco antifraude (Low)." }
-  ]
+  ],
+  "createdAt": "2026-06-14T10:00:00"
 }
 ```
 
-O campo `priorityComponents` deixa **transparente** como o score foi formado.
+### GET `/transacoes?page=1&size=10` — Lista paginada
+```json
+{
+  "items": [ /* lista de TransactionResponse */ ],
+  "totalItems": 4,
+  "totalPages": 1,
+  "currentPage": 1,
+  "pageSize": 10
+}
+```
+
+### PUT `/transacoes/{id}` — Atualizar transação
+```json
+{
+  "description": "PIX urgente folha de pagamento - revisado",
+  "reference": "PIX-2026-001-REV",
+  "amount": 200000.00,
+  "type": "Pix",
+  "clientType": "Corporate",
+  "fraudRisk": "Low",
+  "cutoffTime": "2026-06-11T16:00:00"
+}
+```
+
+### PATCH `/transacoes/{id}/status` — Atualizar apenas o status
+```json
+{ "status": "Completed" }
+```
+
+### GET `/transacoes/estatisticas` — Estatísticas
+```json
+{
+  "waiting":    2,
+  "processing": 1,
+  "completed":  1,
+  "deleted":    0,
+  "total":      4
+}
+```
 
 ### Valores aceitos (enums, como texto)
 - `type`: `Pix`, `Ted`, `Boleto`, `InternationalRemittance`
 - `clientType`: `Standard`, `Premium`, `Corporate`
 - `fraudRisk`: `Low`, `Medium`, `High`
+- `status` (PATCH): `Waiting`, `Processing`, `Completed`
 
-> **CPF/CNPJ:** validado com **dígitos verificadores** (não só o formato). Apenas números, 11
-> dígitos (CPF) ou 14 (CNPJ). CPFs de exemplo válidos: `11144477735`, `47207183887`.
+> **CPF/CNPJ:** validado com **dígitos verificadores**. Apenas números, 11 dígitos (CPF) ou 14
+> (CNPJ). CPFs válidos para teste: `11144477735`, `47207183887`, `52998224725`.
 
-### Exemplos com cURL
-```bash
-# Criar
-curl -X POST http://localhost:5272/transactions -H "Content-Type: application/json" \
-  -d '{"cpf":"47207183887","description":"TED urgente","amount":500000,"type":"Ted","clientType":"Corporate","fraudRisk":"Low","cutoffTime":"2026-06-11T13:00:00"}'
+---
 
-# Consultar (troque o {id})
-curl http://localhost:5272/transactions/{id}
+## 🗄️ Banco de dados (PostgreSQL)
 
-# Excluir logicamente
-curl -X DELETE http://localhost:5272/transactions/{id}
+A persistência usa **PostgreSQL** via **EF Core 9 + Npgsql**. As migrations são aplicadas
+automaticamente na inicialização. O banco é configurado via connection string:
+
+| Ambiente | Configuração |
+|----------|-------------|
+| Docker Compose | Variável de ambiente `ConnectionStrings__DefaultConnection` |
+| Local | `appsettings.Development.json` → `ConnectionStrings.DefaultConnection` |
+
+Connection string padrão (local):
+```
+Host=localhost;Port=5432;Database=priority_queue;Username=postgres;Password=postgres
 ```
 
 ---
 
-## 🗄️ Banco de dados (InMemory) e como migrar para um banco real
+## 🧪 Testes unitários
 
-A persistência usa **EF Core InMemory** com o padrão **Repository** e `DbContext`. Para trocar por
-um banco relacional, basta **uma linha** em `Infrastructure/DependencyInjection.cs`:
-
-```csharp
-// De:
-services.AddDbContext<AppDbContext>(o => o.UseInMemoryDatabase("PaymentProcessingQueueDb"));
-// Para (ex.: SQL Server):
-services.AddDbContext<AppDbContext>(o => o.UseSqlServer(connectionString));
+```bash
+dotnet test tests/PaymentProcessingQueueApi.UnitTests
 ```
 
-O mapeamento (`TransactionConfiguration`) já grava os enums como texto e define tamanhos/precisão,
-prontos para um schema relacional.
+**33 testes** cobrindo:
+- `TransactionPriorityRuleTests` — scoring por fator, penalidade de fraude, total nunca negativo
+- `BinaryHeapTests` — insert, peek, extractTop, heap vazio, duplicatas, ordem decrescente
+- `TransactionSoftDeleteTests` — exclusão lógica, duplo delete, update em entidade excluída, UpdateStatus
 
 ---
 
 ## 🧰 Stack
 - .NET 9 / ASP.NET Core (Controllers)
-- EF Core 9 (provedor InMemory)
+- EF Core 9 + Npgsql (PostgreSQL)
+- Docker / Docker Compose
 - Swashbuckle (Swagger/OpenAPI)
+- xUnit (testes unitários)

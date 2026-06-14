@@ -29,7 +29,7 @@ public sealed class CreateTransactionRequest
     [Range(0.01, double.MaxValue, ErrorMessage = "O valor deve ser maior que zero.")]
     public decimal Amount { get; set; }
 
-    /// <summary>Tipo da transação: Pix, Ted, Boleto ou InternationalRemittance.</summary>
+    /// <summary>Tipo da transação: Pix, Credito, Debito ou Boleto.</summary>
     /// <example>Pix</example>
     [Required]
     [EnumDataType(typeof(TransactionType))]

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using PaymentProcessingQueueApi.Application.Interfaces;
 using PaymentProcessingQueueApi.Domain.Abstractions;
@@ -11,12 +12,14 @@ namespace PaymentProcessingQueueApi.Infrastructure;
 /// <summary>Registro de dependências da camada de Infraestrutura.</summary>
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(this IServiceCollection services)
+    public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Banco em memória (InMemory). Para trocar por SQL Server/PostgreSQL, basta
-        // alterar apenas esta linha e adicionar o pacote do provedor correspondente.
+        var connectionString = configuration.GetConnectionString("DefaultConnection")
+            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' não configurada.");
+
         services.AddDbContext<AppDbContext>(options =>
-            options.UseInMemoryDatabase("PaymentProcessingQueueDb"));
+            options.UseNpgsql(connectionString,
+                b => b.MigrationsAssembly(typeof(AppDbContext).Assembly.GetName().Name)));
 
         services.AddScoped<ITransactionRepository, TransactionRepository>();
         services.AddSingleton<IClock, SystemClock>();

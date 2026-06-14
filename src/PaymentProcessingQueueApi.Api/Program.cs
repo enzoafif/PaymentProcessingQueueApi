@@ -8,8 +8,13 @@ using PaymentProcessingQueueApi.Api.Middlewares;
 using PaymentProcessingQueueApi.Application;
 using PaymentProcessingQueueApi.Domain.Abstractions;
 using PaymentProcessingQueueApi.Domain.PriorityRules;
+using Microsoft.EntityFrameworkCore;
 using PaymentProcessingQueueApi.Infrastructure;
 using PaymentProcessingQueueApi.Infrastructure.Persistence;
+
+// Necessário para que o Npgsql trate DateTime como timestamp without time zone (comportamento legado),
+// compatível com o restante do código que usa DateTime (não DateTimeOffset).
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,7 +47,7 @@ builder.Services.AddSwaggerGen(options =>
 
 // Composição das camadas.
 builder.Services.AddApplication();
-builder.Services.AddInfrastructure();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
@@ -67,7 +72,7 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var context = services.GetRequiredService<AppDbContext>();
-    context.Database.EnsureCreated();
+    context.Database.Migrate();
 
     var priorityRule = services.GetRequiredService<IPriorityRule>();
     var clock = services.GetRequiredService<IClock>();

@@ -28,4 +28,22 @@ public static class TransactionMappings
             .Select(c => new PriorityComponentResponse { Factor = c.Factor, Points = c.Points, Reason = c.Reason })
             .ToList()
     };
+
+    public static PagedTransactionResponse ToPagedResponse(this PagedResultDto<TransactionDto> paged) => new()
+    {
+        Items = paged.Items.Select(d => d.ToResponse()).ToList(),
+        TotalItems = paged.TotalItems,
+        TotalPages = paged.TotalPages,
+        CurrentPage = paged.CurrentPage,
+        PageSize = paged.PageSize
+    };
+
+    public static StatisticsResponse ToResponse(this TransactionStatisticsDto dto) => new()
+    {
+        Waiting    = dto.Waiting,
+        Processing = dto.Processing,
+        Completed  = dto.Completed,
+        Deleted    = dto.Deleted,
+        Total      = dto.Total
+    };
 }

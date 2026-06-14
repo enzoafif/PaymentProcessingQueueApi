@@ -1,0 +1,38 @@
+
+services:
+  postgres:
+    image: postgres:17
+    container_name: priority-queue-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: priority_queue
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d priority_queue"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: priority-queue-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=priority_queue;Username=postgres;Password=postgres
+    ports:
+      - "5089:8080"
+
+volumes:
+  postgres_data:

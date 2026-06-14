@@ -33,18 +33,29 @@ public sealed class TransactionPriorityRule : IPriorityRule
         return new PriorityResult(total, components);
     }
 
-    // Valor: maior valor => maior exposição a multas/liquidez => maior prioridade (5..40).
+    // Valor: dois grupos separados em R$ 5.000.
+    // Alto valor (> 5k): 25–50 pontos proporcionais ao valor (cap em R$ 1.000.000).
+    // Baixo valor (≤ 5k): 0–24 pontos proporcionais ao valor.
+    // Dentro de cada grupo, quanto maior o valor maior a pontuação.
     private static PriorityComponent ScoreAmount(decimal amount)
     {
-        var (points, range) = amount switch
+        int points;
+        string group;
+
+        if (amount > 5_000m)
         {
-            >= 1_000_000m => (40, "≥ R$ 1.000.000"),
-            >= 100_000m   => (30, "≥ R$ 100.000"),
-            >= 10_000m    => (20, "≥ R$ 10.000"),
-            >= 1_000m     => (10, "≥ R$ 1.000"),
-            _             => (5,  "< R$ 1.000")
-        };
-        return new PriorityComponent("Amount", points, $"Valor da transação ({range}).");
+            var normalized = Math.Min(1m, (amount - 5_000m) / 995_000m);
+            points = 25 + (int)Math.Round(normalized * 25m);
+            group = "Alto valor";
+        }
+        else
+        {
+            var normalized = amount / 5_000m;
+            points = (int)Math.Round(normalized * 24m);
+            group = "Baixo valor";
+        }
+
+        return new PriorityComponent("Amount", points, $"Valor da transação ({group}: R$ {amount:N2}).");
     }
 
     // Cutoff: quanto mais próximo (ou já vencido) o horário limite, maior a urgência (3..35).
@@ -74,15 +85,15 @@ public sealed class TransactionPriorityRule : IPriorityRule
         return new PriorityComponent("ClientType", points, $"Segmento do cliente ({type}).");
     }
 
-    // Tipo de transação: janelas de liquidação mais rígidas pontuam mais (3..10).
+    // Tipo de transação: liquidações mais rígidas pontuam mais (3..8).
     private static PriorityComponent ScoreTransactionType(TransactionType type)
     {
         var points = type switch
         {
-            TransactionType.InternationalRemittance => 10,
-            TransactionType.Pix                     => 8,
-            TransactionType.Ted                     => 5,
-            _                                       => 3
+            TransactionType.Pix     => 8,
+            TransactionType.Credito => 6,
+            TransactionType.Debito  => 5,
+            _                       => 3  // Boleto
         };
         return new PriorityComponent("TransactionType", points, $"Tipo de transação ({type}).");
     }
