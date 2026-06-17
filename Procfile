@@ -1,1 +1,1 @@
-web: dotnet PaymentProcessingQueueApi.Api.dll --urls http://+:$PORT
+web: cd src/PaymentProcessingQueueApi.Api/bin/publish && ./PaymentProcessingQueueApi.Api --urls http://+:$PORT
