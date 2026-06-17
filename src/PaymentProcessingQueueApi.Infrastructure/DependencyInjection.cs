@@ -14,8 +14,11 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        var connectionString = configuration.GetConnectionString("DefaultConnection")
-            ?? throw new InvalidOperationException("Connection string 'DefaultConnection' não configurada.");
+        var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+        var connectionString = databaseUrl is not null
+            ? ParseDatabaseUrl(databaseUrl)
+            : configuration.GetConnectionString("DefaultConnection")
+              ?? throw new InvalidOperationException("Connection string 'DefaultConnection' não configurada.");
 
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql(connectionString,
@@ -25,5 +28,12 @@ public static class DependencyInjection
         services.AddSingleton<IClock, SystemClock>();
 
         return services;
+    }
+
+    private static string ParseDatabaseUrl(string databaseUrl)
+    {
+        var uri = new Uri(databaseUrl);
+        var userInfo = uri.UserInfo.Split(':', 2);
+        return $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.TrimStart('/')};Username={userInfo[0]};Password={userInfo[1]};SSL Mode=Require;Trust Server Certificate=true";
     }
 }
