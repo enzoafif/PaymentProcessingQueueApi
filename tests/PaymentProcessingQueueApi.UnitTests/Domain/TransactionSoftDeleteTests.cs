@@ -69,7 +69,7 @@ public class TransactionSoftDeleteTests
         t.SoftDelete(Now);
 
         Assert.Throws<BusinessRuleException>(() =>
-            t.Update("Nova desc", null, 1000m, TransactionType.Ted,
+            t.Update("Nova desc", null, 1000m, TransactionType.Debito,
                 ClientType.Premium, FraudRiskLevel.Low, Now.AddHours(3), Now));
     }
 

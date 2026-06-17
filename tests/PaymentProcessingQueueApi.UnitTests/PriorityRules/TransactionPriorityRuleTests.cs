@@ -132,11 +132,11 @@ public class TransactionPriorityRuleTests
     [Fact]
     public void Calculate_MaxScenario_ReturnsExpectedTotal()
     {
-        // Amount>=1M(40) + Cutoff<=15min(30) + Corporate(15) + InternationalRemittance(10) + Low(0) = 95
-        var t = Make(2_000_000m, TransactionType.InternationalRemittance, ClientType.Corporate,
+        // Amount>=1M(40) + Cutoff<=15min(30) + Corporate(15) + Pix(8) + Low(0) = 93
+        var t = Make(2_000_000m, TransactionType.Pix, ClientType.Corporate,
             FraudRiskLevel.Low, cutoffOffsetMinutes: 5);
         var result = Rule.Calculate(t, BaseTime);
-        Assert.Equal(95, result.Total);
+        Assert.Equal(93, result.Total);
     }
 
     // ─── Desempate ────────────────────────────────────────────────────────────────
