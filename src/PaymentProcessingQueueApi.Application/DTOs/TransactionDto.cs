@@ -24,4 +24,6 @@ public sealed record TransactionDto(
     DateTime? UpdatedAt,
     DateTime? DeletedAt,
     int? PositionInQueue,
-    IReadOnlyList<PriorityComponentDto> PriorityComponents);
+    IReadOnlyList<PriorityComponentDto> PriorityComponents,
+    int? HeapIndex,
+    string? HeapRole);

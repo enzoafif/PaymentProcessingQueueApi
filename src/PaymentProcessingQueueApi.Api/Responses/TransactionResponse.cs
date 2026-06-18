@@ -40,4 +40,13 @@ public sealed class TransactionResponse
 
     /// <summary>Detalhamento de como a prioridade foi calculada.</summary>
     public IReadOnlyList<PriorityComponentResponse> PriorityComponents { get; init; } = [];
+
+    /// <summary>
+    /// Índice da transação no vetor interno do heap (null se não estiver na fila ativa).
+    /// Índice 0 = raiz; filho esquerdo de i = 2i+1; filho direito de i = 2i+2.
+    /// </summary>
+    public int? HeapIndex { get; init; }
+
+    /// <summary>Papel da transação na árvore do heap (ex.: "Raiz", "Filho Esquerdo (pai: índice 0)").</summary>
+    public string? HeapRole { get; init; }
 }

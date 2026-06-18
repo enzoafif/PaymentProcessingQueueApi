@@ -26,7 +26,9 @@ public static class TransactionMappings
         PositionInQueue = dto.PositionInQueue,
         PriorityComponents = dto.PriorityComponents
             .Select(c => new PriorityComponentResponse { Factor = c.Factor, Points = c.Points, Reason = c.Reason })
-            .ToList()
+            .ToList(),
+        HeapIndex = dto.HeapIndex,
+        HeapRole = dto.HeapRole
     };
 
     public static PagedTransactionResponse ToPagedResponse(this PagedResultDto<TransactionDto> paged) => new()

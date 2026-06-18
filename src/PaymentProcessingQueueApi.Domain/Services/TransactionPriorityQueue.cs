@@ -32,6 +32,19 @@ public sealed class TransactionPriorityQueue
     }
 
     /// <summary>
+    /// Constrói o heap com as transações informadas e retorna cada item junto com seu
+    /// índice no vetor interno (= posição na árvore binária). Útil para expor a estrutura
+    /// do heap na resposta da API.
+    /// </summary>
+    public IReadOnlyList<(Transaction Transaction, int HeapIndex)> GetAllWithHeapInfo(
+        IEnumerable<Transaction> transactions)
+    {
+        var heap = Build(transactions);
+        var array = heap.ToHeapArray();
+        return array.Select((t, i) => (t, i)).ToList();
+    }
+
+    /// <summary>
     /// Calcula a posição de uma transação na fila (1 = próxima a ser atendida).
     /// A posição é "1 + (quantidade de transações com prioridade ESTRITAMENTE maior)",
     /// segundo o mesmo critério do heap. Roda em O(n) com O(1) de memória extra — não precisa

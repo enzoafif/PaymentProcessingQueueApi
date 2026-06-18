@@ -103,6 +103,20 @@ public sealed class BinaryHeap<T>
         }
     }
 
+    /// <summary>
+    /// Retorna os itens na ordem interna do vetor do heap (índice = posição na árvore binária).
+    /// Índice 0 = raiz; filho esquerdo de i = 2i+1; filho direito de i = 2i+2.
+    /// </summary>
+    public IReadOnlyList<T> ToHeapArray() => _items.AsReadOnly();
+
+    /// <summary>Descreve o papel de um nó pelo seu índice no vetor do heap.</summary>
+    public static string RoleLabel(int index) => index switch
+    {
+        0 => "Raiz",
+        _ when index % 2 == 1 => $"Filho Esquerdo (pai: índice {(index - 1) / 2})",
+        _ => $"Filho Direito (pai: índice {(index - 1) / 2})"
+    };
+
     private void Swap(int a, int b)
         => (_items[a], _items[b]) = (_items[b], _items[a]);
 }
