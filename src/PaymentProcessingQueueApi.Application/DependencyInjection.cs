@@ -8,6 +8,7 @@ using PaymentProcessingQueueApi.Application.UseCases.GetStatistics;
 using PaymentProcessingQueueApi.Application.UseCases.GetTransactionById;
 using PaymentProcessingQueueApi.Application.UseCases.SearchTransactions;
 using PaymentProcessingQueueApi.Application.UseCases.UpdateTransaction;
+using PaymentProcessingQueueApi.Application.UseCases.GetTransacoesResumidas;
 using PaymentProcessingQueueApi.Application.UseCases.UpdateTransactionStatus;
 using PaymentProcessingQueueApi.Domain.PriorityRules;
 using PaymentProcessingQueueApi.Domain.Services;
@@ -34,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<AttendNextTransactionUseCase>();
         services.AddScoped<UpdateTransactionStatusUseCase>();
         services.AddScoped<GetStatisticsUseCase>();
+        services.AddScoped<GetTransacoesResumidasUseCase>();
 
         return services;
     }

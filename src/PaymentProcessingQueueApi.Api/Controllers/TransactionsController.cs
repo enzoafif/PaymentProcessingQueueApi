@@ -11,6 +11,7 @@ using PaymentProcessingQueueApi.Application.UseCases.GetStatistics;
 using PaymentProcessingQueueApi.Application.UseCases.GetTransactionById;
 using PaymentProcessingQueueApi.Application.UseCases.SearchTransactions;
 using PaymentProcessingQueueApi.Application.UseCases.UpdateTransaction;
+using PaymentProcessingQueueApi.Application.UseCases.GetTransacoesResumidas;
 using PaymentProcessingQueueApi.Application.UseCases.UpdateTransactionStatus;
 
 namespace PaymentProcessingQueueApi.Api.Controllers;
@@ -35,6 +36,7 @@ public sealed class TransactionsController : ControllerBase
     private readonly AttendNextTransactionUseCase _attendNextTransaction;
     private readonly UpdateTransactionStatusUseCase _updateTransactionStatus;
     private readonly GetStatisticsUseCase _getStatistics;
+    private readonly GetTransacoesResumidasUseCase _getTransacoesResumidas;
 
     public TransactionsController(
         CreateTransactionUseCase createTransaction,
@@ -46,7 +48,8 @@ public sealed class TransactionsController : ControllerBase
         GetNextTransactionUseCase getNextTransaction,
         AttendNextTransactionUseCase attendNextTransaction,
         UpdateTransactionStatusUseCase updateTransactionStatus,
-        GetStatisticsUseCase getStatistics)
+        GetStatisticsUseCase getStatistics,
+        GetTransacoesResumidasUseCase getTransacoesResumidas)
     {
         _createTransaction = createTransaction;
         _getTransactionById = getTransactionById;
@@ -58,6 +61,7 @@ public sealed class TransactionsController : ControllerBase
         _attendNextTransaction = attendNextTransaction;
         _updateTransactionStatus = updateTransactionStatus;
         _getStatistics = getStatistics;
+        _getTransacoesResumidas = getTransacoesResumidas;
     }
 
     // ─── Criação ────────────────────────────────────────────────────────────────
@@ -204,6 +208,28 @@ public sealed class TransactionsController : ControllerBase
     {
         await _deleteTransaction.ExecuteAsync(id, cancellationToken);
         return NoContent();
+    }
+
+    // ─── Visualização resumida (heap) ────────────────────────────────────────────
+
+    /// <summary>
+    /// Lista as transações Waiting com descrição, prioridade e posição na árvore do heap,
+    /// ordenadas por índice (nível a nível). Ideal para visualização em aula.
+    /// </summary>
+    /// <response code="200">Lista resumida das transações na fila, com papel no heap.</response>
+    [HttpGet("resumidas")]
+    [ProducesResponseType(typeof(IReadOnlyList<TransacaoResumidaResponse>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<IReadOnlyList<TransacaoResumidaResponse>>> GetResumidas(CancellationToken cancellationToken)
+    {
+        var dtos = await _getTransacoesResumidas.ExecuteAsync(cancellationToken);
+        var response = dtos.Select(d => new TransacaoResumidaResponse
+        {
+            Descricao    = d.Descricao,
+            Prioridade   = d.Prioridade,
+            IndiceNoHeap = d.IndiceNoHeap,
+            PapelNoHeap  = d.PapelNoHeap
+        }).ToList();
+        return Ok(response);
     }
 
     // ─── Estatísticas ────────────────────────────────────────────────────────────
